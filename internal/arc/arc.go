@@ -41,7 +41,8 @@ func loadReportLog(path string) ([][]string, error) {
 	return processReport(f)
 }
 
-// ProcessReport ...
+// ProcessReport knows how to extract data from a log file
+// and return them in a format suitable for writing into csv file.
 func processReport(r io.Reader) ([][]string, error) {
 	var lines [][]string
 	var srno, wprn, premiseid string
