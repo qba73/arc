@@ -44,13 +44,11 @@ func TestProcessReport(t *testing.T) {
 	data := strings.NewReader(content)
 
 	got, err := processReport(data)
+	if err != nil {
+		t.Fatalf("error processing report: %s", err)
+	}
 
 	t.Run("Number of records", func(t *testing.T) {
-		wantError := false
-		if (err != nil) != wantError {
-			t.Fatalf("error processing report: %s", err)
-		}
-
 		wantLen := 8
 		if len(got) != wantLen {
 			t.Errorf("ProcessReport() got %d lines in report, want: %d", len(got), wantLen)
@@ -58,11 +56,6 @@ func TestProcessReport(t *testing.T) {
 	})
 
 	t.Run("Header", func(t *testing.T) {
-		wantError := false
-		if (err != nil) != wantError {
-			t.Fatalf("error processing report: %s", err)
-		}
-
 		wantHeader := []string{"Sr.No", "WPRN", "PremiseID"}
 		if !cmp.Equal(got[0], wantHeader) {
 			t.Errorf("%s", cmp.Diff(got[0], wantHeader))
@@ -75,4 +68,17 @@ func TestProcessReport(t *testing.T) {
 			t.Errorf("%s", cmp.Diff(got[1], wantRecord))
 		}
 	})
+}
+
+func TestProcessReport_EmptyInput(t *testing.T) {
+	data := strings.NewReader(contentNoRecords)
+
+	// We expect failure here as the input data
+	// does not contain any records to process.
+	expectedErr := true
+
+	_, err := processReport(data)
+	if (err != nil) != expectedErr {
+		t.Errorf("got error: %s", err)
+	}
 }
