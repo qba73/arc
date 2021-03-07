@@ -41,8 +41,8 @@ func loadReportLog(path string) ([][]string, error) {
 	return processReport(f)
 }
 
-// ProcessReport knows how to extract data from a log file
-// and return them in a format suitable for writing into csv file.
+// processReport knows how to extract data from a log file
+// and returns them in a format ready for writing to a csv file.
 func processReport(r io.Reader) ([][]string, error) {
 	var lines [][]string
 	var srno, wprn, premiseid string
@@ -61,13 +61,12 @@ func processReport(r io.Reader) ([][]string, error) {
 			}
 
 			line := []string{srno, wprn, premiseid}
-			//line := fmt.Sprintf("%s,%s,%s\n", srno, wprn, premiseid)
 			lines = append(lines, line)
 		}
 	}
 
 	// We don't create a csv report file if the input
-	// log data file does not contain data we are interested in.
+	// log data file doesn't contain data we are interested in.
 	if len(lines) == 1 {
 		return nil, fmt.Errorf("processed log report does not contain data")
 	}

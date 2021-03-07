@@ -8,7 +8,7 @@ import (
 	"github.com/qba73/arct/internal/arc"
 )
 
-// Variables used during the go build.
+// Values of these vars are passed during the build (Makefile).
 var (
 	version = "dev"
 	commit  = "none"
