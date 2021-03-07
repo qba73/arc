@@ -1,5 +1,4 @@
 SHELL := /bin/bash
-
 export PROJECT = arct
 VCS_REF=`git rev-parse HEAD`
 ITERATION=$(shell date -u +%Y-%m-%dT%H-%M-%SZ)
@@ -40,3 +39,4 @@ build:
 
 snapshot:
 	goreleaser build --snapshot --rm-dist
+
