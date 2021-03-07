@@ -1,0 +1,29 @@
+project_name: arct
+before:
+  hooks:
+    - go mod tidy
+    - go mod vendor
+
+builds:
+  -
+    id: "arct-build"
+    dir: .
+    main: ./cmd/arc/main.go
+    binary: arct
+    flags:
+      - -tags=dev
+      - -v
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .Commit }} -X main.date={{ .CommitDate }} 
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    skip: false
+
