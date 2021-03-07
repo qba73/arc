@@ -13,7 +13,7 @@ import (
 
 // GenerateReport takes a path to the logfile and generate
 // csv report in the given output file. If the operation
-// is not successfull it returns an error.
+// is not successful it returns an error.
 func GenerateReport(filein, fileout string) error {
 	records, err := loadReportLog(filein)
 	if err != nil {
