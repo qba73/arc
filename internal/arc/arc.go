@@ -5,6 +5,7 @@ package arc
 import (
 	"bufio"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,69 +16,64 @@ import (
 // csv report in the given output file. If the operation
 // is not successful it returns an error.
 func GenerateReport(filein, fileout string) error {
-	records, err := loadReportLog(filein)
+	fin, err := os.Open(filein)
 	if err != nil {
-		return err
+		return fmt.Errorf("opening log file: %s, err: %v", filein, err)
 	}
+	defer fin.Close()
 
 	fout, err := os.Create(fileout)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating output file: %s, err: %v", fileout, err)
+	}
+	defer fout.Close()
+
+	if err := processData(fin, fout); err != nil {
+		return fmt.Errorf("creating data file: %s from log file: %s, err: %v", fileout, filein, err)
 	}
 
-	if err := writeCSV(records, fout); err != nil {
-		return err
-	}
 	return nil
 }
 
-// loadReportLog knows how to load ArcTool log file.
-func loadReportLog(path string) ([][]string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return processReport(f)
-}
+func processData(r io.Reader, w io.Writer) error {
+	csvwriter := csv.NewWriter(w)
+	csvheader := []string{"Sr.No", "WPRN", "PremiseID"}
+	csvwriter.Write(csvheader)
 
-// processReport knows how to extract data from a log file
-// and returns them in a format ready for writing to a csv file.
-func processReport(r io.Reader) ([][]string, error) {
-	var lines [][]string
+	// Variables to hold values extracted from a log line.
 	var srno, wprn, premiseid string
+	linesNumber := 1
 
-	header := []string{"Sr.No", "WPRN", "PremiseID"}
-	lines = append(lines, header)
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		l := scanner.Text()
+		if !strings.HasPrefix(l, "Sr.No") {
+			continue
+		}
 
-	scaner := bufio.NewScanner(r)
-	for scaner.Scan() {
-		l := scaner.Text()
-		if strings.HasPrefix(l, "Sr.No") {
-			l = strings.ReplaceAll(l, ";", "")
-			_, err := fmt.Sscanf(l, "Sr.No = %s WPRN = %s PremiseID = %s", &srno, &wprn, &premiseid)
-			if err != nil {
-				return nil, fmt.Errorf("error when processing log line: %v", err)
-			}
+		linesNumber++
 
-			line := []string{srno, wprn, premiseid}
-			lines = append(lines, line)
+		// We need to clean ';' to prepare string for Sscanf function.
+		l = strings.ReplaceAll(l, ";", "")
+		_, err := fmt.Sscanf(l, "Sr.No = %s WPRN = %s PremiseID = %s", &srno, &wprn, &premiseid)
+		if err != nil {
+			return fmt.Errorf("processing log line: %s, %v", l, err)
+		}
+
+		if err := csvwriter.Write([]string{srno, wprn, premiseid}); err != nil {
+			return fmt.Errorf("writing line to csv file: %v", []string{srno, wprn, premiseid})
 		}
 	}
 
-	// We don't create a csv report file if the input
-	// log data file doesn't contain data we are interested in.
-	if len(lines) == 1 {
-		return nil, fmt.Errorf("processed log report does not contain data")
+	// We are not interested in an empty csv file with a header only.
+	// So, we return error and abandon creating an empty csv file.
+	if linesNumber == 1 {
+		return errors.New("no data in the input file")
+	}
+	csvwriter.Flush()
+	if err := csvwriter.Error(); err != nil {
+		return fmt.Errorf("writing csv file: %v", err)
 	}
 
-	return lines, nil
-}
-
-func writeCSV(records [][]string, w io.Writer) error {
-	csvwriter := csv.NewWriter(w)
-	if err := csvwriter.WriteAll(records); err != nil {
-		return err
-	}
 	return nil
 }

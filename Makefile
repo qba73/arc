@@ -1,4 +1,4 @@
-.phony: test
+.phony: test testc
 
 ROOT	:= $(PWD)
 GO_HTML_COV	:= ./coverage.html
@@ -35,9 +35,8 @@ help:
 # ==============================================================================
 # Running tests on the local machine
 
-testlocal: ## Run unit tests and staticcheck locally
+test: ## Run unit tests and staticcheck locally
 	go test ./... -v -count=1
-	staticcheck ./...
 
 # ==============================================================================
 # Modules support
@@ -72,7 +71,7 @@ snapshot:
 clean: ## Remove docker container if exist
 	docker rm -f ${GO_DOCKER_CONTAINER} || true
 
-test: ## Run unittests inside container
+testc: ## Run unittests inside container
 	docker run -w /app -v ${ROOT}:/app ${GO_DOCKER_IMAGE} go test -v ./... -coverprofile=${GO_TEST_OUTFILE}
 	docker run -w /app -v ${ROOT}:/app ${GO_DOCKER_IMAGE} go tool cover -html=${GO_TEST_OUTFILE} -o ${GO_HTML_COV}
 
@@ -106,3 +105,4 @@ endif
 		${GO_DOCKER_IMAGE} ./cc-test-reporter after-build --prefix ${PREFIX}
 
 test-ci: _before-cc test _after-cc
+
