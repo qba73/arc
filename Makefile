@@ -1,18 +1,18 @@
 .phony: test testc
 
-ROOT	:= $(PWD)
-GO_HTML_COV	:= ./coverage.html
-GO_TEST_OUTFILE	:= ./c.out
-GO_DOCKER_IMAGE	:= golang:1.16
-GO_DOCKER_CONTAINER	:= arct-container
-CC_TEST_REPORTER_ID	:= ${CC_TEST_REPORTER_ID}
-CC_PREFIX	:= github.com/qba73/arct
+ROOT                := $(PWD)
+GO_HTML_COV         := ./coverage.html
+GO_TEST_OUTFILE     := ./c.out
+GO_DOCKER_IMAGE     := golang:1.16
+GO_DOCKER_CONTAINER := arct-container
+CC_TEST_REPORTER_ID := ${CC_TEST_REPORTER_ID}
+CC_PREFIX           := github.com/qba73/arct
 
-SHELL	:= /bin/bash
-PROJECT	:= arct
-VCS_REF	:= `git rev-parse HEAD`
-ITERATION	:= $(shell date -u +%Y-%m-%dT%H-%M-%SZ)
-GOARCH	:= amd64
+SHELL     := /bin/bash
+PROJECT   := arct
+VCS_REF   := `git rev-parse HEAD`
+ITERATION := $(shell date -u +%Y-%m-%dT%H-%M-%SZ)
+GOARCH    := amd64
 
 # Let's parse make target comments prefixed with ## and generate help output for the user. 
 define PRINT_HELP_PYSCRIPT
@@ -37,6 +37,7 @@ help:
 
 test: ## Run unit tests and staticcheck locally
 	go test ./... -v -count=1
+	staticcheck ./...
 
 # ==============================================================================
 # Modules support
@@ -104,5 +105,5 @@ endif
 		-e CC_TEST_REPORTER_ID=${CC_TEST_REPORTER_ID} \
 		${GO_DOCKER_IMAGE} ./cc-test-reporter after-build --prefix ${PREFIX}
 
-test-ci: _before-cc test _after-cc
+test-ci: _before-cc testc _after-cc
 
