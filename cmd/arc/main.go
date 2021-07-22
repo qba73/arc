@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/qba73/arct/internal/arc"
+	arc "github.com/qba73/arct"
 )
 
 // Values of these vars are passed during the build (Makefile).
 var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	Version = ""
+	Commit  = ""
+	Date    = ""
 )
 
 func main() {
@@ -21,6 +21,7 @@ func main() {
 	flag.StringVar(&filein, "in", "", "ArcTool log file to process")
 	flag.StringVar(&fileout, "out", "", "Output CSV file")
 	flag.BoolVar(&ver, "version", false, "Show version")
+
 	flag.Parse()
 
 	flag.Usage = func() {
@@ -67,5 +68,5 @@ func verifyFlags(in, out string) {
 }
 
 func showVersion() {
-	fmt.Printf("arct, version: %s\nbuild tag: %s\ndate: %s", version, commit, date)
+	fmt.Printf("\nVersion: %s\nBuild: %s\nDate: %s\n", Version, Commit, Date)
 }

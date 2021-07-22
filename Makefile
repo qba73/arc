@@ -12,7 +12,9 @@ SHELL     := /bin/bash
 PROJECT   := arct
 VCS_REF   := `git rev-parse HEAD`
 ITERATION := $(shell date -u +%Y-%m-%dT%H-%M-%SZ)
+BUILD_DATE := `date -u +"%Y-%m-%d-%H-%M-%SZ"`
 GOARCH    := amd64
+VERSION   := 0.1.0
 
 # Let's parse make target comments prefixed with ## and generate help output for the user. 
 define PRINT_HELP_PYSCRIPT
@@ -36,7 +38,7 @@ help:
 # Running tests on the local machine
 
 test: ## Run unit tests and staticcheck locally
-	go test ./... -v -count=1
+	go test -race -count=1 -v
 	staticcheck ./...
 
 # ==============================================================================
@@ -58,7 +60,7 @@ list: ## List Go modules
 	go list -mod=mod all
 
 build: ## Build Go binaries
-	go build -ldflags "-X main.build=${VCS_REF}" ./cmd/arct/main.go
+	go build -ldflags "-X main.Commit=${VCS_REF} -X main.Version=${VERSION} -X main.Date=${BUILD_DATE}" -o arct ./cmd/arc/main.go
 
 # ==============================================================================
 # Go releaser
