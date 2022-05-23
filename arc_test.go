@@ -1,17 +1,246 @@
-package arc
+package arc_test
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"io"
-	"io/ioutil"
-	"os"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/qba73/arc"
 )
 
-func content() io.Reader {
-	return strings.NewReader(`—————————————START————————————19/02/2021 12:51:06
+func TestProcessReport_ReturnsErrorOnReadError(t *testing.T) {
+	t.Parallel()
+	err := arc.ProcessReport(iotest.ErrReader(errors.New("test error")), io.Discard)
+	if err == nil {
+		t.Fatal(nil)
+	}
+}
+
+func TestProcessReport_ReturnsErrorOnInvalidLine(t *testing.T) {
+	t.Parallel()
+	err := arc.ProcessReport(strings.NewReader(invalidData), io.Discard)
+	if err == nil {
+		t.Fatal(nil)
+	}
+}
+
+// errWriter implements writer interface. Calling Write
+// method on errWriter will always return error.
+type errWriter struct{}
+
+// Write returns writer error. It's used solely for testing.
+func (errWriter) Write(p []byte) (int, error) {
+	return 0, errors.New("writer error")
+}
+
+func TestProcessReportToCSV_ReturnsErrorOnWriteError(t *testing.T) {
+	t.Parallel()
+	err := arc.ProcessReportToCSV(strings.NewReader(validData), errWriter{})
+	if err == nil {
+		t.Fatal(nil)
+	}
+}
+
+func TestProcessReport_ReturnsErrorOnNoData(t *testing.T) {
+	t.Parallel()
+	err := arc.ProcessReport(strings.NewReader(noData), io.Discard)
+	if err == nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProcessReport_ProducesCorrectOutput(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	err := arc.ProcessReportToCSV(strings.NewReader(validData), buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := correctCSVoutput
+	got := buf.String()
+
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestProcessReportToJSON_ProducesCorrectOutput(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	err := arc.ProcessReportToJSON(strings.NewReader(twoLinesData), buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := correctJSONoutput
+	got := buf.String()
+
+	if want != got {
+		t.Errorf("want %q, got %q", want, got)
+	}
+}
+
+func TestProcessReportToCSV_ProducesCorrectOutput(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	err := arc.ProcessReportToCSV(strings.NewReader(validData), buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := correctCSVoutput
+	got := buf.String()
+
+	if want != got {
+		t.Errorf("want %q, got %q", want, got)
+	}
+
+}
+
+func TestParseReport_ReadsLogDataAndProducesReport(t *testing.T) {
+	t.Parallel()
+	want := twoLinesReport
+	got, err := arc.ParseReport(strings.NewReader(twoLinesData))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(want, got) {
+		t.Errorf(cmp.Diff(want, got))
+	}
+}
+
+func TestParseReport_ReturnsErrorOnNoData(t *testing.T) {
+	t.Parallel()
+	_, err := arc.ParseReport(strings.NewReader(noData))
+	if err == nil {
+		t.Fatal(err)
+	}
+}
+
+func TestParseReport_ReturnsErrorOnInvalidLine(t *testing.T) {
+	t.Parallel()
+	_, err := arc.ParseReport(strings.NewReader(invalidData))
+	if err == nil {
+		t.Fatal(err)
+	}
+}
+
+func TestJSONFormatReportAsJSON(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	want := correctJSONoutput
+	err := twoLinesReport.JSON(buf)
+	if err != nil {
+		t.Fatal()
+	}
+	got := buf.String()
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestCSVFormatReportAsCSV(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	want := correctTwoLinesCSVoutput
+	err := twoLinesReport.CSV(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+// newTestServer
+func newTestServer(wantURI string, t *testing.T) *httptest.Server {
+	ts := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		gotReqURI := r.RequestURI
+
+		verifyURIs(wantURI, gotReqURI, t)
+		body := `[{"sr_no":"SKSZPUB0257-1","wprn":"2607303","premise_id":"2306982"},{"sr_no":"SKSZPUB0257-2","wprn":"2607304","premise_id":"3104983"}]`
+		_, err := io.Copy(rw, strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	return ts
+}
+
+// verifyURIs is a test helper function that verifies if provided URIs are the same.
+func verifyURIs(wantURI, gotURI string, t *testing.T) {
+	wantUri, err := url.Parse(wantURI)
+	if err != nil {
+		t.Fatalf("error parsing URI %q, %v", wantURI, err)
+	}
+	gotUri, err := url.Parse(gotURI)
+	if err != nil {
+		t.Fatalf("error parsing URI %q, %v", wantURI, err)
+	}
+	// Verify if paths of both URIs are the same.
+	if wantUri.Path != gotUri.Path {
+		t.Fatalf("want %q, got %q", wantUri.Path, gotUri.Path)
+	}
+
+	wantQuery, err := url.ParseQuery(wantUri.RawQuery)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotQuery, err := url.ParseQuery(gotUri.RawQuery)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify if query parameters match.
+	if !cmp.Equal(wantQuery, gotQuery) {
+		t.Fatalf("URIs are not equal, \n%s\n", cmp.Diff(wantQuery, gotQuery))
+	}
+}
+
+func TestUploadFileHandler(t *testing.T) {
+	t.Parallel()
+
+	ts := newTestServer("/upload", t)
+	defer ts.Close()
+
+	client := http.DefaultClient
+
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", ts.URL, "upload"), strings.NewReader(validData))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+
+}
+
+var (
+	invalidData = `—————————————START————————————19/02/2021 12:51:06
+File loading is started for file dfpub0457_DLRZone1_residential_2021-02-18.csv
+Sr.No = SKSZPUB0257-1; WPRN = 2607303; PremiseID = 2306982
+Sr.No = SKSZPUB0257-2; WPRM = 2607304; PremiseIDx = 3104983
+Total number of records to be processed 4
+Total number of processed records successfully 4
+Total number of failed records 0
+—————————————END—————————————19/02/2021 12:52:21
+`
+
+	validData = `—————————————START————————————19/02/2021 12:51:06
 File loading is started for file dfpub0457_DLRZone1_residential_2021-02-18.csv
 Sr.No = SKSZPUB0257-1; WPRN = 2607303; PremiseID = 2306982
 Sr.No = SKSZPUB0257-2; WPRN = 2607304; PremiseID = 3104983
@@ -29,26 +258,17 @@ Sr.No = ALSZPUB0241-3; WPRN = 1507309; PremiseID = 2601988
 Total number of records to be processed 3
 Total number of processed records successfully 3
 Total number of failed records 0
-—————————————END—————————————19/02/2021 12:58:21`)
-}
+—————————————END—————————————19/02/2021 12:58:21
+`
 
-func contentNoRecords() io.Reader {
-	return strings.NewReader(`—————————————START————————————19/02/2021 12:51:06
+	noData = `—————————————START————————————19/02/2021 12:51:06
 File loading is started for file dfpub0457_DLRZone1_residential_2021-02-18.csv
 Total number of records to be processed 0
 Total number of processed records successfully 0
 Total number of failed records 0
-—————————————END—————————————19/02/2021 12:52:21
-—————————————START————————————19/02/2021 12:53:48
-File loading is started for file dfpub0441_DLRZone4_residential_2021-02-18.csv
-Total number of records to be processed 0
-Total number of processed records successfully 0
-Total number of failed records 0
-—————————————END—————————————19/02/2021 12:58:21`)
-}
+—————————————END—————————————19/02/2021 12:52:21`
 
-func TestProcessData(t *testing.T) {
-	wantCSV := `Sr.No,WPRN,PremiseID
+	correctCSVoutput = `Sr.No,WPRN,PremiseID
 SKSZPUB0257-1,2607303,2306982
 SKSZPUB0257-2,2607304,3104983
 SKSZPUB0257-3,2607305,5616984
@@ -58,39 +278,25 @@ ALSZPUB0241-2,1507308,2601987
 ALSZPUB0241-3,1507309,2601988
 `
 
-	out, err := ioutil.TempFile(".", "fout.csv")
-	if err != nil {
-		t.Fatalf("can't create a temp file, got error: %s", err)
-	}
-	defer os.Remove(out.Name())
+	correctTwoLinesCSVoutput = `Sr.No,WPRN,PremiseID
+SKSZPUB0257-1,2607303,2306982
+SKSZPUB0257-2,2607304,3104983
+`
 
-	err = processData(content(), out)
-	if err != nil {
-		t.Errorf("processData() got error: %s", err)
-	}
+	correctJSONoutput = `[{"sr_no":"SKSZPUB0257-1","wprn":"2607303","premise_id":"2306982"},{"sr_no":"SKSZPUB0257-2","wprn":"2607304","premise_id":"3104983"}]`
 
-	got, err := ioutil.ReadFile(out.Name())
-	if err != nil {
-		t.Errorf("reading from out file")
-	}
+	twoLinesData = `—————————————START————————————19/02/2021 12:51:06
+File loading is started for file dfpub0457_DLRZone1_residential_2021-02-18.csv
+Sr.No = SKSZPUB0257-1; WPRN = 2607303; PremiseID = 2306982
+Sr.No = SKSZPUB0257-2; WPRN = 2607304; PremiseID = 3104983
+Total number of records to be processed 2
+Total number of processed records successfully 2
+Total number of failed records 0
+—————————————END—————————————19/02/2021 12:52:21
+`
 
-	if !cmp.Equal(string(got), wantCSV) {
-		t.Errorf("processData() \n%s", cmp.Diff(string(got), wantCSV))
+	twoLinesReport = arc.Report{
+		{SerialNumber: "SKSZPUB0257-1", WPRN: "2607303", PremiseID: "2306982"},
+		{SerialNumber: "SKSZPUB0257-2", WPRN: "2607304", PremiseID: "3104983"},
 	}
-}
-
-func TestProcessData_Empty(t *testing.T) {
-	out, err := ioutil.TempFile(".", "fout.csv")
-	if err != nil {
-		t.Fatalf("can't create a temp file, got error: %s", err)
-	}
-	defer os.Remove(out.Name())
-
-	wantError := "no data in the input file"
-	err = processData(contentNoRecords(), out)
-	if err != nil {
-		if !cmp.Equal(err.Error(), wantError) {
-			t.Errorf("processData() got: \n%s", cmp.Diff(err.Error(), wantError))
-		}
-	}
-}
+)

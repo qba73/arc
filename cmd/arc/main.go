@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	arc "github.com/qba73/arct"
+	"github.com/qba73/arc"
 )
 
 // Values of these vars are passed during the build (Makefile).

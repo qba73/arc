@@ -1,4 +1,4 @@
-module github.com/qba73/arct
+module github.com/qba73/arc
 
 go 1.18
 

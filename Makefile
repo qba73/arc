@@ -4,12 +4,12 @@ ROOT                := $(PWD)
 GO_HTML_COV         := ./coverage.html
 GO_TEST_OUTFILE     := ./c.out
 GO_DOCKER_IMAGE     := golang:1.16
-GO_DOCKER_CONTAINER := arct-container
+GO_DOCKER_CONTAINER := arc-container
 CC_TEST_REPORTER_ID := ${CC_TEST_REPORTER_ID}
-CC_PREFIX           := github.com/qba73/arct
+CC_PREFIX           := github.com/qba73/arc
 
 SHELL     := /bin/bash
-PROJECT   := arct
+PROJECT   := arc
 VCS_REF   := `git rev-parse HEAD`
 ITERATION := $(shell date -u +%Y-%m-%dT%H-%M-%SZ)
 BUILD_DATE := `date -u +"%Y-%m-%d-%H-%M-%SZ"`
@@ -60,7 +60,7 @@ list: ## List Go modules
 	go list -mod=mod all
 
 build: ## Build Go binaries
-	go build -ldflags "-X main.Commit=${VCS_REF} -X main.Version=${VERSION} -X main.Date=${BUILD_DATE}" -o arct ./cmd/arc/main.go
+	go build -ldflags "-X main.Commit=${VCS_REF} -X main.Version=${VERSION} -X main.Date=${BUILD_DATE}" -o arc ./cmd/arc/main.go
 
 # ==============================================================================
 # Go releaser
