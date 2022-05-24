@@ -16,17 +16,33 @@ import (
 	"github.com/qba73/arc"
 )
 
-func TestProcessReport_ReturnsErrorOnReadError(t *testing.T) {
+func TestProcessReportToCSV_ReturnsErrorOnReadError(t *testing.T) {
 	t.Parallel()
-	err := arc.ProcessReport(iotest.ErrReader(errors.New("test error")), io.Discard)
+	err := arc.ProcessReportToCSV(iotest.ErrReader(errors.New("test error")), io.Discard)
 	if err == nil {
 		t.Fatal(nil)
 	}
 }
 
-func TestProcessReport_ReturnsErrorOnInvalidLine(t *testing.T) {
+func TestProcessReportToJSON_ReturnsErrorOnReadError(t *testing.T) {
 	t.Parallel()
-	err := arc.ProcessReport(strings.NewReader(invalidData), io.Discard)
+	err := arc.ProcessReportToJSON(iotest.ErrReader(errors.New("test error")), io.Discard)
+	if err == nil {
+		t.Fatal(nil)
+	}
+}
+
+func TestProcessReportToCSV_ReturnsErrorOnInvalidLine(t *testing.T) {
+	t.Parallel()
+	err := arc.ProcessReportToCSV(strings.NewReader(invalidData), io.Discard)
+	if err == nil {
+		t.Fatal(nil)
+	}
+}
+
+func TestProcessReportToJSON_ReturnsErrorOnInvalidLine(t *testing.T) {
+	t.Parallel()
+	err := arc.ProcessReportToJSON(strings.NewReader(invalidData), io.Discard)
 	if err == nil {
 		t.Fatal(nil)
 	}
@@ -49,27 +65,27 @@ func TestProcessReportToCSV_ReturnsErrorOnWriteError(t *testing.T) {
 	}
 }
 
-func TestProcessReport_ReturnsErrorOnNoData(t *testing.T) {
+func TestProcessReportToJSON_ReturnsErrorOnWriteError(t *testing.T) {
 	t.Parallel()
-	err := arc.ProcessReport(strings.NewReader(noData), io.Discard)
+	err := arc.ProcessReportToJSON(strings.NewReader(validData), errWriter{})
+	if err == nil {
+		t.Fatal(nil)
+	}
+}
+
+func TestProcessReportToCSV_ReturnsErrorOnNoData(t *testing.T) {
+	t.Parallel()
+	err := arc.ProcessReportToCSV(strings.NewReader(noData), io.Discard)
 	if err == nil {
 		t.Fatal(err)
 	}
 }
 
-func TestProcessReport_ProducesCorrectOutput(t *testing.T) {
+func TestProcessReportToJSON_ReturnsErrorOnNoData(t *testing.T) {
 	t.Parallel()
-	buf := &bytes.Buffer{}
-	err := arc.ProcessReportToCSV(strings.NewReader(validData), buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want := correctCSVoutput
-	got := buf.String()
-
-	if !cmp.Equal(want, got) {
-		t.Error(cmp.Diff(want, got))
+	err := arc.ProcessReportToJSON(strings.NewReader(noData), io.Discard)
+	if err == nil {
+		t.Fatal(nil)
 	}
 }
 
@@ -134,7 +150,7 @@ func TestParseReport_ReturnsErrorOnInvalidLine(t *testing.T) {
 	}
 }
 
-func TestJSONFormatReportAsJSON(t *testing.T) {
+func TestJSONFormatsReportAsJSON(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
 	want := correctJSONoutput
@@ -148,7 +164,7 @@ func TestJSONFormatReportAsJSON(t *testing.T) {
 	}
 }
 
-func TestCSVFormatReportAsCSV(t *testing.T) {
+func TestCSVFormatsReportAsCSV(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
 	want := correctTwoLinesCSVoutput
@@ -208,7 +224,7 @@ func verifyURIs(wantURI, gotURI string, t *testing.T) {
 	}
 }
 
-func TestUploadFileHandler(t *testing.T) {
+func TestUploadFile(t *testing.T) {
 	t.Parallel()
 
 	ts := newTestServer("/upload", t)
@@ -226,7 +242,6 @@ func TestUploadFileHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer res.Body.Close()
-
 }
 
 var (

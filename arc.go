@@ -33,49 +33,6 @@ func GenerateReport(filein, fileout string) error {
 	return ProcessReportToCSV(fin, fout)
 }
 
-// ProcessReport knows how to process input and filter
-// data for further processing.
-func ProcessReport(r io.Reader, w io.Writer) error {
-	csvwriter := csv.NewWriter(w)
-	csvwriter.Write([]string{"Sr.No", "WPRN", "PremiseID"})
-
-	var srno, wprn, premiseid string
-	linesNumber := 1
-
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		l := scanner.Text()
-
-		if !isLineWithData(l) {
-			continue
-		}
-
-		linesNumber++
-
-		// We need to clean ';' to prepare string for Sscanf function.
-		l = strings.ReplaceAll(l, ";", "")
-		_, err := fmt.Sscanf(l, "Sr.No = %s WPRN = %s PremiseID = %s", &srno, &wprn, &premiseid)
-		if err != nil {
-			return fmt.Errorf("processing log line: %s, %v", l, err)
-		}
-
-		if err := csvwriter.Write([]string{srno, wprn, premiseid}); err != nil {
-			return fmt.Errorf("writing line to csv file: %v", l)
-		}
-	}
-
-	// We are not interested in an empty csv file with a header only.
-	// So, we return error and abandon creating an empty csv file.
-	if linesNumber == 1 {
-		return errors.New("no data in the input file")
-	}
-	csvwriter.Flush()
-	if err := csvwriter.Error(); err != nil {
-		return fmt.Errorf("writing csv file: %v", err)
-	}
-	return nil
-}
-
 // isLineWithData holds logic to verify if
 // the string holds the data for processing.
 func isLineWithData(l string) bool {
