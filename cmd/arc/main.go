@@ -68,5 +68,5 @@ func verifyFlags(in, out string) {
 }
 
 func showVersion() {
-	fmt.Printf("\nVersion: %s\nBuild: %s\nDate: %s\n", Version, Commit, Date)
+	fmt.Printf("\nVersion: %s\nGitRef: %s\nBuild Time: %s\n", Version, Commit, Date)
 }
