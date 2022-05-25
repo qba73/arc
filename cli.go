@@ -24,7 +24,7 @@ func WithArgs(args []string) option {
 	}
 }
 
-// WithOoutput constructs an option.
+// WithOutput constructs an option.
 func WithOutput(out io.Writer) option {
 	return func(c *config) {
 		c.output = out

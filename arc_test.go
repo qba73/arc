@@ -179,6 +179,44 @@ func TestCSVFormatsReportAsCSV(t *testing.T) {
 	}
 }
 
+func TestDefaultParser_GeneratesReportInCSVFormat(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+
+	p := arc.NewParser()
+	p.Input = bytes.NewBufferString(validData)
+	p.Output = buf
+
+	err := p.ToCSV()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := correctCSVoutput
+	got := buf.String()
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestDefaultParser_GeneratesReportInJSONFormat(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+
+	p := arc.NewParser()
+	p.Input = bytes.NewBufferString(twoLinesData)
+	p.Output = buf
+
+	err := p.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := correctJSONoutput
+	got := buf.String()
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
 // newTestServer
 func newTestServer(wantURI string, t *testing.T) *httptest.Server {
 	ts := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {

@@ -10,11 +10,9 @@ import (
 func TestCLI_PrintsVersion(t *testing.T) {
 	t.Parallel()
 	tc := struct {
-		name string
 		args []string
 		want string
 	}{
-		name: "Print version",
 		args: []string{"-version"},
 		want: "Version: \nGitRef: \nBuild Time: \n",
 	}

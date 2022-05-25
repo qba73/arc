@@ -33,6 +33,39 @@ func GenerateReport(filein, fileout string) error {
 	return ProcessReportToCSV(fin, fout)
 }
 
+type parser struct {
+	Input  io.Reader
+	Output io.Writer
+}
+
+// NewParser constructs a default report parser.
+func NewParser() parser {
+	return parser{
+		Input:  os.Stdin,
+		Output: os.Stdout,
+	}
+}
+
+// ToCSV formats report in the csv format.
+func (p parser) ToCSV() error {
+	return ProcessReportToCSV(p.Input, p.Output)
+}
+
+// ToJSON formats report in the JSON format.
+func (p parser) ToJSON() error {
+	return ProcessReportToJSON(p.Input, p.Output)
+}
+
+// ReportCSV generates CSV report using default parser.
+func ReportCSV() error {
+	return NewParser().ToCSV()
+}
+
+// ReportJSON generates JSON report using default parser.
+func ReportJSON() error {
+	return NewParser().ToJSON()
+}
+
 // isLineWithData holds logic to verify if
 // the string holds the data for processing.
 func isLineWithData(l string) bool {
