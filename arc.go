@@ -33,37 +33,75 @@ func GenerateReport(filein, fileout string) error {
 	return ProcessReportToCSV(fin, fout)
 }
 
+type option func(*parser) error
+
+// WithInput configures input for the parser.
+func WithInput(input io.Reader) option {
+	return func(p *parser) error {
+		if input == nil {
+			return errors.New("nil input reader")
+		}
+		p.input = input
+		return nil
+	}
+}
+
+// WithOutput configures output for the parser.
+func WithOutput(output io.Writer) option {
+	return func(p *parser) error {
+		if output == nil {
+			return errors.New("nil output reader")
+		}
+		p.output = output
+		return nil
+	}
+}
+
 type parser struct {
-	Input  io.Reader
-	Output io.Writer
+	input  io.Reader
+	output io.Writer
 }
 
 // NewParser constructs a default report parser.
-func NewParser() parser {
-	return parser{
-		Input:  os.Stdin,
-		Output: os.Stdout,
+func NewParser(opts ...option) (parser, error) {
+	p := parser{
+		input:  os.Stdin,
+		output: os.Stdout,
 	}
+	for _, opt := range opts {
+		if err := opt(&p); err != nil {
+			return parser{}, err
+		}
+	}
+	return p, nil
 }
 
 // ToCSV formats report in the csv format.
 func (p parser) ToCSV() error {
-	return ProcessReportToCSV(p.Input, p.Output)
+	return ProcessReportToCSV(p.input, p.output)
 }
 
 // ToJSON formats report in the JSON format.
 func (p parser) ToJSON() error {
-	return ProcessReportToJSON(p.Input, p.Output)
+	return ProcessReportToJSON(p.input, p.output)
 }
 
 // ReportCSV generates CSV report using default parser.
 func ReportCSV() error {
-	return NewParser().ToCSV()
+	p, err := NewParser()
+	if err != nil {
+		panic("internal error")
+	}
+	return p.ToCSV()
 }
 
 // ReportJSON generates JSON report using default parser.
 func ReportJSON() error {
-	return NewParser().ToJSON()
+	p, err := NewParser()
+	if err != nil {
+		panic("internal error")
+	}
+	return p.ToJSON()
 }
 
 // isLineWithData holds logic to verify if

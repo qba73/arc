@@ -183,11 +183,15 @@ func TestDefaultParser_GeneratesReportInCSVFormat(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
 
-	p := arc.NewParser()
-	p.Input = bytes.NewBufferString(validData)
-	p.Output = buf
+	p, err := arc.NewParser(
+		arc.WithInput(bytes.NewBufferString(validData)),
+		arc.WithOutput(buf),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	err := p.ToCSV()
+	err = p.ToCSV()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,11 +206,14 @@ func TestDefaultParser_GeneratesReportInJSONFormat(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
 
-	p := arc.NewParser()
-	p.Input = bytes.NewBufferString(twoLinesData)
-	p.Output = buf
-
-	err := p.ToJSON()
+	p, err := arc.NewParser(
+		arc.WithInput(bytes.NewBufferString(twoLinesData)),
+		arc.WithOutput(buf),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = p.ToJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
