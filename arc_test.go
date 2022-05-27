@@ -150,36 +150,7 @@ func TestParseReport_ReturnsErrorOnInvalidLine(t *testing.T) {
 	}
 }
 
-func TestJSONFormatsReportAsJSON(t *testing.T) {
-	t.Parallel()
-	buf := &bytes.Buffer{}
-	want := correctJSONoutput
-	err := twoLinesReport.JSON(buf)
-	if err != nil {
-		t.Fatal()
-	}
-	got := buf.String()
-	if !cmp.Equal(want, got) {
-		t.Error(cmp.Diff(want, got))
-	}
-}
-
-func TestCSVFormatsReportAsCSV(t *testing.T) {
-	t.Parallel()
-	buf := &bytes.Buffer{}
-	want := correctTwoLinesCSVoutput
-	err := twoLinesReport.CSV(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := buf.String()
-
-	if !cmp.Equal(want, got) {
-		t.Error(cmp.Diff(want, got))
-	}
-}
-
-func TestDefaultParser_GeneratesReportInCSVFormat(t *testing.T) {
+func TestParser_GeneratesReportInCSVFormat(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
 
@@ -202,7 +173,7 @@ func TestDefaultParser_GeneratesReportInCSVFormat(t *testing.T) {
 	}
 }
 
-func TestDefaultParser_GeneratesReportInJSONFormat(t *testing.T) {
+func TestParser_GeneratesReportInJSONFormat(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
 
@@ -219,6 +190,51 @@ func TestDefaultParser_GeneratesReportInJSONFormat(t *testing.T) {
 	}
 	want := correctJSONoutput
 	got := buf.String()
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestParser_GeneratesReportInCSVFormatWithInputFromArgs(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	args := []string{"testdata/valid_input_data.log"}
+	p, err := arc.NewParser(
+		arc.WithInputFromArgs(args),
+		arc.WithOutput(buf),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := correctCSVoutput
+	err = p.ToCSV()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestParser_GenerateReportInCSVFormatOnEmptyInputArgs(t *testing.T) {
+	t.Parallel()
+	inputBuf := bytes.NewBufferString(validData)
+	outputBuf := &bytes.Buffer{}
+	p, err := arc.NewParser(
+		arc.WithInput(inputBuf),
+		arc.WithInputFromArgs([]string{}),
+		arc.WithOutput(outputBuf),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := correctCSVoutput
+	err = p.ToCSV()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := outputBuf.String()
 	if !cmp.Equal(want, got) {
 		t.Error(cmp.Diff(want, got))
 	}
@@ -336,11 +352,6 @@ SKSZPUB0257-4,2607306,1626985
 ALSZPUB0241-1,1507307,2601986
 ALSZPUB0241-2,1507308,2601987
 ALSZPUB0241-3,1507309,2601988
-`
-
-	correctTwoLinesCSVoutput = `Sr.No,WPRN,PremiseID
-SKSZPUB0257-1,2607303,2306982
-SKSZPUB0257-2,2607304,3104983
 `
 
 	correctJSONoutput = `[{"sr_no":"SKSZPUB0257-1","wprn":"2607303","premise_id":"2306982"},{"sr_no":"SKSZPUB0257-2","wprn":"2607304","premise_id":"3104983"}]`

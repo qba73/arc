@@ -57,6 +57,20 @@ func WithOutput(output io.Writer) option {
 	}
 }
 
+func WithInputFromArgs(args []string) option {
+	return func(p *parser) error {
+		if len(args) == 0 {
+			return nil
+		}
+		f, err := os.Open(args[0])
+		if err != nil {
+			return err
+		}
+		p.input = f
+		return nil
+	}
+}
+
 type parser struct {
 	input  io.Reader
 	output io.Writer
@@ -88,18 +102,24 @@ func (p parser) ToJSON() error {
 
 // ReportCSV generates CSV report using default parser.
 func ReportCSV() error {
-	p, err := NewParser()
+	p, err := NewParser(
+		WithInputFromArgs(os.Args[1:]),
+	)
 	if err != nil {
-		panic("internal error")
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	return p.ToCSV()
 }
 
 // ReportJSON generates JSON report using default parser.
 func ReportJSON() error {
-	p, err := NewParser()
+	p, err := NewParser(
+		WithInputFromArgs(os.Args[1:]),
+	)
 	if err != nil {
-		panic("internal error")
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	return p.ToJSON()
 }
@@ -116,31 +136,8 @@ type reportLine struct {
 	PremiseID    string `json:"premise_id"`
 }
 
-// Report represents data ready to save in JSON or CSV formats.
+// Report is a parsed date to save in JSON or CSV formats.
 type Report []reportLine
-
-// CSV formats report data in the CSV format.
-func (r Report) CSV(w io.Writer) error {
-	writer := csv.NewWriter(w)
-	rep := [][]string{{"Sr.No", "WPRN", "PremiseID"}}
-	for _, l := range r {
-		rep = append(rep, []string{l.SerialNumber, l.WPRN, l.PremiseID})
-	}
-	return writer.WriteAll(rep)
-}
-
-// JSON formats report data in the JSON format.
-func (r Report) JSON(w io.Writer) error {
-	b, err := json.Marshal(r)
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(b)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 // ParseReport takes a reader and returs a report. The report is a
 // slice of structs containing parsed data from the reader.
