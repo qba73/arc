@@ -217,7 +217,32 @@ func TestParser_GeneratesReportInCSVFormatWithInputFromArgs(t *testing.T) {
 	}
 }
 
-func TestParser_GenerateReportInCSVFormatOnEmptyInputArgs(t *testing.T) {
+func TestParser_GeneratesReportWithInputFromArgsReadingMultipleFiles(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	args := []string{
+		"testdata/valid_input_data.log",
+		"testdata/valid_input_data2.log",
+	}
+	p, err := arc.NewParser(
+		arc.WithInputFromArgs(args),
+		arc.WithOutput(buf),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := correctCSVoutputFromTwoFiles
+	err = p.ToCSV()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestParser_GeneratesReportInCSVFormatOnEmptyInputArgs(t *testing.T) {
 	t.Parallel()
 	inputBuf := bytes.NewBufferString(validData)
 	outputBuf := &bytes.Buffer{}
@@ -352,6 +377,23 @@ SKSZPUB0257-4,2607306,1626985
 ALSZPUB0241-1,1507307,2601986
 ALSZPUB0241-2,1507308,2601987
 ALSZPUB0241-3,1507309,2601988
+`
+
+	correctCSVoutputFromTwoFiles = `Sr.No,WPRN,PremiseID
+SKSZPUB0257-1,2607303,2306982
+SKSZPUB0257-2,2607304,3104983
+SKSZPUB0257-3,2607305,5616984
+SKSZPUB0257-4,2607306,1626985
+ALSZPUB0241-1,1507307,2601986
+ALSZPUB0241-2,1507308,2601987
+ALSZPUB0241-3,1507309,2601988
+SKSZPUB0258-1,2607305,4306982
+SKSZPUB0258-2,2607306,6104983
+SKSZPUB0258-3,2607307,7616984
+SKSZPUB0258-4,2607308,5626985
+ALSZPUB0243-1,2507307,4601986
+ALSZPUB0243-2,2507308,4601987
+ALSZPUB0243-3,2507309,4601988
 `
 
 	correctJSONoutput = `[{"sr_no":"SKSZPUB0257-1","wprn":"2607303","premise_id":"2306982"},{"sr_no":"SKSZPUB0257-2","wprn":"2607304","premise_id":"3104983"}]`

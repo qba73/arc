@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -59,14 +60,23 @@ func WithOutput(output io.Writer) option {
 
 func WithInputFromArgs(args []string) option {
 	return func(p *parser) error {
-		if len(args) == 0 {
-			return nil
-		}
-		f, err := os.Open(args[0])
-		if err != nil {
+		fset := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+		if err := fset.Parse(args); err != nil {
 			return err
 		}
-		p.input = f
+		args := fset.Args()
+		if len(args) < 1 {
+			return nil
+		}
+		files := make([]io.Reader, len(args))
+		for i, path := range args {
+			f, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			files[i] = NewReadAutoCloser(f)
+		}
+		p.input = io.MultiReader(files...)
 		return nil
 	}
 }
