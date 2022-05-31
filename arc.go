@@ -221,7 +221,12 @@ func ProcessReportToCSV(r io.Reader, w io.Writer) error {
 
 // RunCLI parses arguments and executes program.
 func RunCLI() {
-	fmt.Println("running cli...")
+	p, err := NewParser(WithInputFromArgs(os.Args[1:]))
+	if err != nil {
+		fmt.Fprint(os.Stderr)
+		os.Exit(1)
+	}
+	p.ToCSV()
 }
 
 // uploadFile is the handler responsible for processing
