@@ -20,12 +20,22 @@ The main requirements/assumptions are that input files are not larger than 10 MB
 Getting help
 
 ```
-$ arc -h
-Usage of ./arc:
-  -in string
-        ArcTool log file to process
-  -out string
-        Output CSV file
-  -version
-        Show version
+$ ./arc -h
+
+arc - ArcTool log processor for generating CSV or JSON data files.
+
+Flags:
+
+-h	"Show help"
+-v	"Show version"
+-out	"A path to the file you want to generate."
+
+Examples:
+
+	// Generate csv file with data from the log file
+	arc < LoaderLogs_19-02-2020.log > report.csv
+
+	// Generate csv file with data from multiple log files
+	arc < file1.log file2.log file3.log > report.csv
+
 ```
