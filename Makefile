@@ -14,7 +14,8 @@ VCS_REF   := `git rev-parse HEAD`
 ITERATION := $(shell date -u +%Y-%m-%dT%H-%M-%SZ)
 BUILD_DATE := `date -u +"%Y-%m-%d-%H-%M-%SZ"`
 GOARCH    := amd64
-VERSION   := 0.1.0
+VERSION	  := 0.1.0
+IMP_PATH  := github.com/qba73/arc
 
 # Let's parse make target comments prefixed with ## and generate help output for the user. 
 define PRINT_HELP_PYSCRIPT
@@ -59,8 +60,9 @@ deps-cleancache:
 list: ## List Go modules
 	go list -mod=mod all
 
+
 build: ## Build Go binaries
-	go build -ldflags "-X main.Commit=${VCS_REF} -X main.Version=${VERSION} -X main.Date=${BUILD_DATE}" -o arc ./cmd/arc/main.go
+	go build -ldflags "-X ${IMP_PATH}.commit=${VCS_REF} -X ${IMP_PATH}.version=${VERSION} -X ${IMP_PATH}.date=${BUILD_DATE}" -o arc ./cmd/arc/main.go
 
 # ==============================================================================
 # Go releaser

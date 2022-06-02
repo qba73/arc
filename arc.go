@@ -61,13 +61,20 @@ func WithOutput(output io.Writer) option {
 func WithInputFromArgs(args []string) option {
 	return func(p *parser) error {
 		fset := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+		help := fset.Bool("h", false, "show usage and examples")
+		version := fset.Bool("v", false, "show program version")
+		fset.SetOutput(p.output)
 		if err := fset.Parse(args); err != nil {
 			return err
 		}
+		p.help = *help
+		p.version = *version
+
 		args := fset.Args()
 		if len(args) < 1 {
 			return nil
 		}
+
 		files := make([]io.Reader, len(args))
 		for i, path := range args {
 			f, err := os.Open(path)
@@ -82,8 +89,10 @@ func WithInputFromArgs(args []string) option {
 }
 
 type parser struct {
-	input  io.Reader
-	output io.Writer
+	input   io.Reader
+	output  io.Writer
+	help    bool
+	version bool
 }
 
 // NewParser constructs a default report parser.
@@ -91,6 +100,7 @@ func NewParser(opts ...option) (parser, error) {
 	p := parser{
 		input:  os.Stdin,
 		output: os.Stdout,
+		help:   false,
 	}
 	for _, opt := range opts {
 		if err := opt(&p); err != nil {
@@ -217,16 +227,6 @@ func ProcessReportToCSV(r io.Reader, w io.Writer) error {
 		rep = append(rep, []string{l.SerialNumber, l.WPRN, l.PremiseID})
 	}
 	return writer.WriteAll(rep)
-}
-
-// RunCLI parses arguments and executes program.
-func RunCLI() {
-	p, err := NewParser(WithInputFromArgs(os.Args[1:]))
-	if err != nil {
-		fmt.Fprint(os.Stderr)
-		os.Exit(1)
-	}
-	p.ToCSV()
 }
 
 // uploadFile is the handler responsible for processing

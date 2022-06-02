@@ -242,6 +242,18 @@ func TestParser_GeneratesReportWithInputFromArgsReadingMultipleFiles(t *testing.
 	}
 }
 
+func TestParser_ShowsUsageOnBogusFlag(t *testing.T) {
+	t.Parallel()
+	args := []string{"-w"}
+	_, err := arc.NewParser(
+		arc.WithOutput(io.Discard),
+		arc.WithInputFromArgs(args),
+	)
+	if err == nil {
+		t.Fatal("want err on bogus flag, got nil")
+	}
+}
+
 func TestParser_GeneratesReportInCSVFormatOnEmptyInputArgs(t *testing.T) {
 	t.Parallel()
 	inputBuf := bytes.NewBufferString(validData)
