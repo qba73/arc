@@ -3,7 +3,7 @@
 ROOT                := $(PWD)
 GO_HTML_COV         := ./coverage.html
 GO_TEST_OUTFILE     := ./c.out
-GO_DOCKER_IMAGE     := golang:1.16
+GO_DOCKER_IMAGE     := golang:1.18
 GO_DOCKER_CONTAINER := arc-container
 CC_TEST_REPORTER_ID := ${CC_TEST_REPORTER_ID}
 CC_PREFIX           := github.com/qba73/arc
@@ -62,7 +62,8 @@ list: ## List Go modules
 
 
 build: ## Build Go binaries
-	go build -ldflags "-X ${IMP_PATH}.commit=${VCS_REF} -X ${IMP_PATH}.version=${VERSION} -X ${IMP_PATH}.date=${BUILD_DATE}" -o arc ./cmd/arc/main.go
+	go build -ldflags "-X ${IMP_PATH}.commit=${VCS_REF} -X ${IMP_PATH}.version=${VERSION} -X ${IMP_PATH}.date=${BUILD_DATE}" -o arc2csv ./cmd/arc2csv/main.go
+	go build -ldflags "-X ${IMP_PATH}.commit=${VCS_REF} -X ${IMP_PATH}.version=${VERSION} -X ${IMP_PATH}.date=${BUILD_DATE}" -o arc2json ./cmd/arc2json/main.go
 
 # ==============================================================================
 # Go releaser

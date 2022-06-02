@@ -7,7 +7,7 @@
 
 # arc
 
-A simple arc tool data transformer
+A simple arc tool data transformer.
 
 The arc command-line utility was developed to solve a business problem related to log data processing.
 
@@ -19,23 +19,47 @@ The main requirements/assumptions are that input files are not larger than 10 MB
 
 Getting help
 
-```
-$ ./arc -h
+### arc2csv
 
-arc - ArcTool log processor for generating CSV or JSON data files.
+```
+$ ./arc2csv -h
+➜  arc git:(tojson) ✗ ./arc2csv -h
+
+arc2csv - ArcTool log processor for parsing log files to CSV format.
 
 Flags:
 
 -h	"Show help"
 -v	"Show version"
--out	"A path to the file you want to generate."
 
 Examples:
 
 	// Generate csv file with data from the log file
-	arc < LoaderLogs_19-02-2020.log > report.csv
+	arc2csv < LoaderLogs_19-02-2020.log > report.csv
 
 	// Generate csv file with data from multiple log files
-	arc < file1.log file2.log file3.log > report.csv
+	arc2csv < file1.log file2.log file3.log > report.csv
+
+```
+
+### arc2json
+
+```
+$ ./arc2json -h
+
+arc2json - ArcTool log processor for parsing log files to JSON format.
+
+Flags:
+
+-h	"Show help"
+-v	"Show version"
+
+Examples:
+
+	// Generate csv file with data from the log file
+	arc2json < LoaderLogs_19-02-2020.log > report.json
+
+	// Generate csv file with data from multiple log files
+	arc2json < file1.log file2.log file3.log > report.json
 
 ```
