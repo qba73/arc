@@ -43,8 +43,7 @@ Getting help
 ### arc2csv
 
 ```
-$ ./arc2csv -h
-➜  arc git:(tojson) ✗ ./arc2csv -h
+$ arc2csv -h
 
 arc2csv - ArcTool log processor for parsing log files to CSV format.
 
@@ -66,7 +65,7 @@ Examples:
 ### arc2json
 
 ```
-$ ./arc2json -h
+$ arc2json -h
 
 arc2json - ArcTool log processor for parsing log files to JSON format.
 
