@@ -10,29 +10,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
-
-// GenerateReport takes a path to the logfile and generate
-// csv report in the given output file. If the operation
-// is not successful it returns an error.
-func GenerateReport(filein, fileout string) error {
-	fin, err := os.Open(filein)
-	if err != nil {
-		return fmt.Errorf("opening log file: %s, err: %v", filein, err)
-	}
-	defer fin.Close()
-
-	fout, err := os.Create(fileout)
-	if err != nil {
-		return fmt.Errorf("creating output file: %s, err: %v", fileout, err)
-	}
-	defer fout.Close()
-
-	return ProcessReportToCSV(fin, fout)
-}
 
 type option func(*parser) error
 
@@ -60,21 +43,9 @@ func WithOutput(output io.Writer) option {
 
 func WithInputFromArgs(args []string) option {
 	return func(p *parser) error {
-		fset := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-		help := fset.Bool("h", false, "show usage and examples")
-		version := fset.Bool("v", false, "show program version")
-		fset.SetOutput(p.output)
-		if err := fset.Parse(args); err != nil {
-			return err
-		}
-		p.help = *help
-		p.version = *version
-
-		args := fset.Args()
 		if len(args) < 1 {
 			return nil
 		}
-
 		files := make([]io.Reader, len(args))
 		for i, path := range args {
 			f, err := os.Open(path)
@@ -89,10 +60,8 @@ func WithInputFromArgs(args []string) option {
 }
 
 type parser struct {
-	input   io.Reader
-	output  io.Writer
-	help    bool
-	version bool
+	input  io.Reader
+	output io.Writer
 }
 
 // NewParser constructs a default report parser.
@@ -100,7 +69,6 @@ func NewParser(opts ...option) (parser, error) {
 	p := parser{
 		input:  os.Stdin,
 		output: os.Stdout,
-		help:   false,
 	}
 	for _, opt := range opts {
 		if err := opt(&p); err != nil {
@@ -229,26 +197,134 @@ func ProcessReportToCSV(r io.Reader, w io.Writer) error {
 	return writer.WriteAll(rep)
 }
 
-// uploadFile is the handler responsible for processing
-// raw data files. It returns
-func uploadFile(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Uploading report file for processing\n")
-	w.Header().Add("Content-Type", "application/json")
+// ==============================================================
+// Command Line Interface
 
+// Values of these vars are passed during the build (Makefile).
+var (
+	version = ""
+	commit  = ""
+	date    = ""
+)
+
+var (
+	usageCSV string = `
+arc2csv - ArcTool log processor for parsing log files to CSV format.
+
+Flags:
+
+-h	"Show help"
+-v	"Show version"
+
+Examples:
+
+	// Generate csv file with data from the log file
+	arc2csv < LoaderLogs_19-02-2020.log > report.csv
+
+	// Generate csv file with data from multiple log files
+	arc2csv < file1.log file2.log file3.log > report.csv
+`
+
+	usageJSON string = `
+arc2json - ArcTool log processor for parsing log files to JSON format.
+
+Flags:
+
+-h	"Show help"
+-v	"Show version"
+
+Examples:
+
+	// Generate csv file with data from the log file
+	arc2json < LoaderLogs_19-02-2020.log > report.json
+
+	// Generate csv file with data from multiple log files
+	arc2json < file1.log file2.log file3.log > report.json
+`
+)
+
+// RunCLI parses arguments and executes main program.
+// It parses output into CSV format.
+func RunCLI() {
+	fset := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	help := fset.Bool("h", false, "show usage and examples")
+	version := fset.Bool("v", false, "show program version")
+	err := fset.Parse(os.Args[1:])
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if *help {
+		fmt.Fprint(os.Stdout, usageCSV)
+		os.Exit(0)
+	}
+	if *version {
+		fmt.Fprint(os.Stdout, showVersion())
+		os.Exit(0)
+	}
+
+	p, err := NewParser(
+		WithInputFromArgs(fset.Args()),
+	)
+	if err != nil {
+		fmt.Fprint(os.Stderr)
+		os.Exit(1)
+	}
+	p.ToCSV()
+}
+
+// RunJSONCLI parses input and executes main program.
+// It parses output into JSON format.
+func RunJSONCLI() {
+	fset := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	help := fset.Bool("h", false, "show usage and examples")
+	version := fset.Bool("v", false, "show program version")
+	err := fset.Parse(os.Args[1:])
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if *help {
+		fmt.Fprint(os.Stdout, usageJSON)
+		os.Exit(0)
+	}
+	if *version {
+		fmt.Fprint(os.Stdout, showVersion())
+		os.Exit(0)
+	}
+
+	p, err := NewParser(
+		WithInputFromArgs(fset.Args()),
+	)
+	if err != nil {
+		fmt.Fprint(os.Stderr)
+		os.Exit(1)
+	}
+	p.ToJSON()
+}
+
+func showVersion() string {
+	return fmt.Sprintf("Version: %s\nGitRef: %s\nBuild Time: %s\n", version, commit, date)
+}
+
+// ==============================================================
+// Web Service
+
+// JSONhandler is the handler responsible for processing
+// raw data files. It returns data formatted as JSON.
+func JSONhandler(w http.ResponseWriter, r *http.Request) {
 	var maxSize int64 = 1024 * 1024
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
-	err := r.ParseMultipartForm(maxSize)
-	if err != nil {
+	if err := r.ParseMultipartForm(maxSize); err != nil {
 		http.Error(w, "report file is too big", http.StatusBadRequest)
 		return
 	}
-
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -256,16 +332,51 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	err = ProcessReportToJSON(file, w)
-	if err != nil {
+	w.Header().Add("Content-Type", "application/json")
+	if err := ProcessReportToJSON(file, w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-// RunServer takes config params and runs arc web werver.
+// CSVhandler is the handler responsible for processing
+// raw data files. It returns data in CSV format.
+func CSVhandler(w http.ResponseWriter, r *http.Request) {
+	var maxSize int64 = 1024 * 1024
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
+	if err := r.ParseMultipartForm(maxSize); err != nil {
+		http.Error(w, "report file is too big", http.StatusBadRequest)
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	w.Header().Add("Content-Type", "text/csv")
+	if err := ProcessReportToCSV(file, w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// RunServer runs arc web service.
 func RunServer() {
-	fmt.Println("server starting")
-	http.HandleFunc("/upload", uploadFile)
-	http.ListenAndServe(":8080", nil)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/csv", CSVhandler)
+	mux.HandleFunc("/json", JSONhandler)
+
+	s := http.Server{
+		ReadTimeout: time.Second,
+		Addr:        ":8085",
+		Handler:     mux,
+	}
+	log.Fatal(s.ListenAndServe())
 }

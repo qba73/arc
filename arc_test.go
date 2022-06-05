@@ -342,6 +342,75 @@ func TestUploadFile(t *testing.T) {
 	defer res.Body.Close()
 }
 
+// ==============================================================
+// Web Service tests
+
+func TestServer_RespondsWithCSVBodyOnValidRequest(t *testing.T) {
+	t.Parallel()
+
+}
+
+func TestServer_RespondsWithErrorOnRequestWithNoBody(t *testing.T) {
+	t.Parallel()
+
+}
+
+func TestServer_RespondsWithErrorOnRequestWithEmptyBody(t *testing.T) {
+	t.Parallel()
+
+}
+
+func TestServer_RespondsWithErrorOnNotAllowedMethodInJSONRequest(t *testing.T) {
+	t.Parallel()
+	ts := httptest.NewServer(http.HandlerFunc(arc.JSONhandler))
+	defer ts.Close()
+
+	req := httptest.NewRequest(http.MethodGet, ts.URL, nil)
+	w := httptest.NewRecorder()
+	arc.JSONhandler(w, req)
+
+	res := w.Result()
+	_, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := http.StatusMethodNotAllowed
+	got := res.StatusCode
+
+	if want != got {
+		t.Errorf("want %v, got %v", want, got)
+	}
+}
+
+func TestServer_RespondsWithErrorOnNotAllowedMethodInCSVRequest(t *testing.T) {
+	t.Parallel()
+	ts := httptest.NewServer(http.HandlerFunc(arc.CSVhandler))
+	defer ts.Close()
+
+	req := httptest.NewRequest(http.MethodGet, ts.URL, nil)
+	w := httptest.NewRecorder()
+	arc.CSVhandler(w, req)
+
+	res := w.Result()
+	_, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := http.StatusMethodNotAllowed
+	got := res.StatusCode
+
+	if want != got {
+		t.Errorf("want %v, got %v", want, got)
+	}
+}
+
+func TestServer_RespondsWithJSONBodyOnValidRquest(t *testing.T) {
+	t.Parallel()
+
+}
+
 var (
 	invalidData = `—————————————START————————————19/02/2021 12:51:06
 File loading is started for file dfpub0457_DLRZone1_residential_2021-02-18.csv

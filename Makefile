@@ -36,6 +36,12 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 # ==============================================================================
+# Running arc web service locally 
+
+run: ## Start arc web service locally (development)
+	go run cmd/arc-api/main.go
+
+# ==============================================================================
 # Running tests on the local machine
 
 test: ## Run unit tests and staticcheck locally
@@ -64,6 +70,7 @@ list: ## List Go modules
 build: ## Build Go binaries
 	go build -ldflags "-X ${IMP_PATH}.commit=${VCS_REF} -X ${IMP_PATH}.version=${VERSION} -X ${IMP_PATH}.date=${BUILD_DATE}" -o arc2csv ./cmd/arc2csv/main.go
 	go build -ldflags "-X ${IMP_PATH}.commit=${VCS_REF} -X ${IMP_PATH}.version=${VERSION} -X ${IMP_PATH}.date=${BUILD_DATE}" -o arc2json ./cmd/arc2json/main.go
+	go build -ldflags "-X ${IMP_PATH}.commit=${VCS_REF} -X ${IMP_PATH}.version=${VERSION} -X ${IMP_PATH}.date=${BUILD_DATE}" -o arc ./cmd/arc-api/main.go
 
 # ==============================================================================
 # Go releaser
