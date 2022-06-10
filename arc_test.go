@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -277,100 +277,16 @@ func TestParser_GeneratesReportInCSVFormatOnEmptyInputArgs(t *testing.T) {
 	}
 }
 
-// newTestServer
-func newTestServer(wantURI string, t *testing.T) *httptest.Server {
-	ts := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		gotReqURI := r.RequestURI
-
-		verifyURIs(wantURI, gotReqURI, t)
-		body := `[{"sr_no":"SKSZPUB0257-1","wprn":"2607303","premise_id":"2306982"},{"sr_no":"SKSZPUB0257-2","wprn":"2607304","premise_id":"3104983"}]`
-		_, err := io.Copy(rw, strings.NewReader(body))
-		if err != nil {
-			t.Fatal(err)
-		}
-	}))
-	return ts
-}
-
-// verifyURIs is a test helper function that verifies if provided URIs are the same.
-func verifyURIs(wantURI, gotURI string, t *testing.T) {
-	wantUri, err := url.Parse(wantURI)
-	if err != nil {
-		t.Fatalf("error parsing URI %q, %v", wantURI, err)
-	}
-	gotUri, err := url.Parse(gotURI)
-	if err != nil {
-		t.Fatalf("error parsing URI %q, %v", wantURI, err)
-	}
-	// Verify if paths of both URIs are the same.
-	if wantUri.Path != gotUri.Path {
-		t.Fatalf("want %q, got %q", wantUri.Path, gotUri.Path)
-	}
-
-	wantQuery, err := url.ParseQuery(wantUri.RawQuery)
-	if err != nil {
-		t.Fatal(err)
-	}
-	gotQuery, err := url.ParseQuery(gotUri.RawQuery)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify if query parameters match.
-	if !cmp.Equal(wantQuery, gotQuery) {
-		t.Fatalf("URIs are not equal, \n%s\n", cmp.Diff(wantQuery, gotQuery))
-	}
-}
-
-func TestUploadFile(t *testing.T) {
-	t.Parallel()
-
-	ts := newTestServer("/upload", t)
-	defer ts.Close()
-
-	client := http.DefaultClient
-
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", ts.URL, "upload"), strings.NewReader(validData))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	res, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-}
-
 // ==============================================================
 // Web Service tests
 
-func TestServer_RespondsWithCSVBodyOnValidRequest(t *testing.T) {
-	t.Parallel()
-
-}
-
-func TestServer_RespondsWithErrorOnRequestWithNoBody(t *testing.T) {
-	t.Parallel()
-
-}
-
-func TestServer_RespondsWithErrorOnRequestWithEmptyBody(t *testing.T) {
-	t.Parallel()
-
-}
-
 func TestServer_RespondsWithErrorOnNotAllowedMethodInJSONRequest(t *testing.T) {
 	t.Parallel()
-	ts := httptest.NewServer(http.HandlerFunc(arc.JSONhandler))
+	handler := arc.NewArcMux()
+	ts := httptest.NewServer(handler)
 	defer ts.Close()
 
-	req := httptest.NewRequest(http.MethodGet, ts.URL, nil)
-	w := httptest.NewRecorder()
-	arc.JSONhandler(w, req)
-
-	res := w.Result()
-	_, err := io.ReadAll(res.Body)
+	res, err := http.Get(fmt.Sprintf("%s/csv", ts.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,32 +299,82 @@ func TestServer_RespondsWithErrorOnNotAllowedMethodInJSONRequest(t *testing.T) {
 	}
 }
 
-func TestServer_RespondsWithErrorOnNotAllowedMethodInCSVRequest(t *testing.T) {
+func TestServer_ReturnsOKAndCSVReport(t *testing.T) {
 	t.Parallel()
-	ts := httptest.NewServer(http.HandlerFunc(arc.CSVhandler))
-	defer ts.Close()
+	handler := arc.NewArcMux()
 
-	req := httptest.NewRequest(http.MethodGet, ts.URL, nil)
-	w := httptest.NewRecorder()
-	arc.CSVhandler(w, req)
+	b := &bytes.Buffer{}
+	w := multipart.NewWriter(b)
 
-	res := w.Result()
-	_, err := io.ReadAll(res.Body)
+	part, err := w.CreateFormFile("file", "file.log")
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, err = io.Copy(part, strings.NewReader(validData))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
 
-	want := http.StatusMethodNotAllowed
-	got := res.StatusCode
+	req := httptest.NewRequest(http.MethodPost, "/csv", b)
+	req.Header.Add("Content-Type", w.FormDataContentType())
+
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	want := http.StatusOK
+	got := res.Code
 
 	if want != got {
-		t.Errorf("want %v, got %v", want, got)
+		t.Errorf("want %d, got %v", want, got)
+	}
+
+	wantBody := correctCSVoutput
+	gotBody := res.Body.String()
+
+	if !cmp.Equal(wantBody, gotBody) {
+		t.Errorf(cmp.Diff(wantBody, gotBody))
 	}
 }
 
-func TestServer_RespondsWithJSONBodyOnValidRquest(t *testing.T) {
+func TestServer_ReturnsOKAndJSONReport(t *testing.T) {
 	t.Parallel()
+	handler := arc.NewArcMux()
 
+	b := &bytes.Buffer{}
+	w := multipart.NewWriter(b)
+
+	part, err := w.CreateFormFile("file", "file.log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.Copy(part, strings.NewReader(twoLinesData))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/json", b)
+	req.Header.Add("Content-Type", w.FormDataContentType())
+
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	want := http.StatusOK
+	got := res.Code
+
+	if want != got {
+		t.Errorf("want %d, got %v", want, got)
+	}
+
+	wantBody := correctJSONoutput
+	gotBody := res.Body.String()
+
+	if !cmp.Equal(wantBody, gotBody) {
+		t.Errorf(cmp.Diff(wantBody, gotBody))
+	}
 }
 
 var (

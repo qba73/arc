@@ -312,26 +312,25 @@ func showVersion() string {
 // ==============================================================
 // Web Service
 
+var maxSizeUpload int64 = 1024 * 1024
+
 // JSONhandler is the handler responsible for processing
 // raw data files. It returns data formatted as JSON.
-func JSONhandler(w http.ResponseWriter, r *http.Request) {
-	var maxSize int64 = 1024 * 1024
+func jsonhandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
-	if err := r.ParseMultipartForm(maxSize); err != nil {
+	if err := r.ParseMultipartForm(maxSizeUpload); err != nil {
 		http.Error(w, "report file is too big", http.StatusBadRequest)
 		return
 	}
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
-
 	w.Header().Add("Content-Type", "application/json")
 	if err := ProcessReportToJSON(file, w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -341,15 +340,12 @@ func JSONhandler(w http.ResponseWriter, r *http.Request) {
 
 // CSVhandler is the handler responsible for processing
 // raw data files. It returns data in CSV format.
-func CSVhandler(w http.ResponseWriter, r *http.Request) {
-	var maxSize int64 = 1024 * 1024
+func csvhandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
-	if err := r.ParseMultipartForm(maxSize); err != nil {
+	if err := r.ParseMultipartForm(maxSizeUpload); err != nil {
 		http.Error(w, "report file is too big", http.StatusBadRequest)
 		return
 	}
@@ -359,7 +355,6 @@ func CSVhandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-
 	w.Header().Add("Content-Type", "text/csv")
 	if err := ProcessReportToCSV(file, w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -367,12 +362,16 @@ func CSVhandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func NewArcMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/csv", csvhandler)
+	mux.HandleFunc("/json", jsonhandler)
+	return mux
+}
+
 // RunServer runs arc web service.
 func RunServer() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/csv", CSVhandler)
-	mux.HandleFunc("/json", JSONhandler)
-
+	mux := NewArcMux()
 	s := http.Server{
 		ReadTimeout: time.Second,
 		Addr:        ":8085",
