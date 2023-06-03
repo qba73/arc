@@ -1,7 +1,5 @@
 [![Go](https://github.com/qba73/arct/actions/workflows/go.yml/badge.svg)](https://github.com/qba73/arct/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/qba73/arct)](https://goreportcard.com/report/github.com/qba73/arct)
-[![Maintainability](https://api.codeclimate.com/v1/badges/219a1d97ec3a5d79ca6e/maintainability)](https://codeclimate.com/github/qba73/arct/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/219a1d97ec3a5d79ca6e/test_coverage)](https://codeclimate.com/github/qba73/arct/test_coverage)
 ![GitHub](https://img.shields.io/github/license/qba73/arct)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/qba73/arct)
 
