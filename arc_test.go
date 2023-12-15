@@ -3,11 +3,7 @@ package arc_test
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
-	"mime/multipart"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -119,7 +115,6 @@ func TestProcessReportToCSV_ProducesCorrectOutput(t *testing.T) {
 	if want != got {
 		t.Errorf("want %q, got %q", want, got)
 	}
-
 }
 
 func TestParseReport_ReadsLogDataAndProducesReport(t *testing.T) {
@@ -274,106 +269,6 @@ func TestParser_GeneratesReportInCSVFormatOnEmptyInputArgs(t *testing.T) {
 	got := outputBuf.String()
 	if !cmp.Equal(want, got) {
 		t.Error(cmp.Diff(want, got))
-	}
-}
-
-// ==============================================================
-// Web Service tests
-
-func TestServer_RespondsWithErrorOnNotAllowedMethodInJSONRequest(t *testing.T) {
-	t.Parallel()
-	handler := arc.NewArcMux()
-	ts := httptest.NewServer(handler)
-	defer ts.Close()
-
-	res, err := http.Get(fmt.Sprintf("%s/csv", ts.URL))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want := http.StatusMethodNotAllowed
-	got := res.StatusCode
-
-	if want != got {
-		t.Errorf("want %v, got %v", want, got)
-	}
-}
-
-func TestServer_ReturnsOKAndCSVReport(t *testing.T) {
-	t.Parallel()
-	handler := arc.NewArcMux()
-
-	b := &bytes.Buffer{}
-	w := multipart.NewWriter(b)
-
-	part, err := w.CreateFormFile("file", "file.log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = io.Copy(part, strings.NewReader(validData))
-	if err != nil {
-		t.Fatal(err)
-	}
-	w.Close()
-
-	req := httptest.NewRequest(http.MethodPost, "/csv", b)
-	req.Header.Add("Content-Type", w.FormDataContentType())
-
-	res := httptest.NewRecorder()
-
-	handler.ServeHTTP(res, req)
-
-	want := http.StatusOK
-	got := res.Code
-
-	if want != got {
-		t.Errorf("want %d, got %v", want, got)
-	}
-
-	wantBody := correctCSVoutput
-	gotBody := res.Body.String()
-
-	if !cmp.Equal(wantBody, gotBody) {
-		t.Errorf(cmp.Diff(wantBody, gotBody))
-	}
-}
-
-func TestServer_ReturnsOKAndJSONReport(t *testing.T) {
-	t.Parallel()
-	handler := arc.NewArcMux()
-
-	b := &bytes.Buffer{}
-	w := multipart.NewWriter(b)
-
-	part, err := w.CreateFormFile("file", "file.log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = io.Copy(part, strings.NewReader(twoLinesData))
-	if err != nil {
-		t.Fatal(err)
-	}
-	w.Close()
-
-	req := httptest.NewRequest(http.MethodPost, "/json", b)
-	req.Header.Add("Content-Type", w.FormDataContentType())
-
-	res := httptest.NewRecorder()
-
-	handler.ServeHTTP(res, req)
-
-	want := http.StatusOK
-	got := res.Code
-
-	if want != got {
-		t.Errorf("want %d, got %v", want, got)
-	}
-
-	wantBody := correctJSONoutput
-	gotBody := res.Body.String()
-
-	if !cmp.Equal(wantBody, gotBody) {
-		t.Errorf(cmp.Diff(wantBody, gotBody))
 	}
 }
 

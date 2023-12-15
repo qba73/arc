@@ -2,7 +2,6 @@ package arc
 
 import (
 	"io"
-	"io/ioutil"
 )
 
 // ReadAutoCloser represents a pipe source that will be automatically closed
@@ -32,7 +31,6 @@ func (a ReadAutoCloser) Close() error {
 		return nil
 	}
 	return a.r.Close()
-	//return a.r.(io.Closer).Close()
 }
 
 // NewReadAutoCloser returns an ReadAutoCloser wrapping the supplied Reader. If
@@ -40,7 +38,7 @@ func (a ReadAutoCloser) Close() error {
 // closable.
 func NewReadAutoCloser(r io.Reader) ReadAutoCloser {
 	if _, ok := r.(io.Closer); !ok {
-		return ReadAutoCloser{ioutil.NopCloser(r)}
+		return ReadAutoCloser{io.NopCloser(r)}
 	}
 	rc, ok := r.(io.ReadCloser)
 	if !ok {
