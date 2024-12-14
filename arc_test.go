@@ -168,6 +168,25 @@ func TestParser_GeneratesReportInCSVFormat(t *testing.T) {
 	}
 }
 
+func BenchmarkToCSV(b *testing.B) {
+	if testing.Short() {
+		b.Skip("skipping benchmark in short mode.")
+	}
+	buf := &bytes.Buffer{}
+
+	p, err := arc.NewParser(
+		arc.WithInput(bytes.NewBufferString(validData)),
+		arc.WithOutput(buf),
+	)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		p.ToCSV()
+	}
+}
+
 func TestParser_GeneratesReportInJSONFormat(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
@@ -187,6 +206,24 @@ func TestParser_GeneratesReportInJSONFormat(t *testing.T) {
 	got := buf.String()
 	if !cmp.Equal(want, got) {
 		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func BenchmarkToJSON(b *testing.B) {
+	if testing.Short() {
+		b.Skip("skipping benchmark in short mode.")
+	}
+	buf := &bytes.Buffer{}
+	p, err := arc.NewParser(
+		arc.WithInput(bytes.NewBufferString(twoLinesData)),
+		arc.WithOutput(buf),
+	)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		p.ToJSON()
 	}
 }
 
