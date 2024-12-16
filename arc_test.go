@@ -125,7 +125,7 @@ func TestParseReport_ReadsLogDataAndProducesReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !cmp.Equal(want, got) {
-		t.Errorf(cmp.Diff(want, got))
+		t.Error(cmp.Diff(want, got))
 	}
 }
 
